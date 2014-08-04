@@ -6,10 +6,6 @@ Imports System.Xml
 Imports System.Xml.XPath
 
 Module JRMCStatusListener
-    Const server = "localhost"
-    Const port = 52199
-    Const user = "rlebrette"
-    Const password = "C0largol$"
     Const sleepTime = 500 ' milliseconds
     '----
     Const baseUrl = "http://{0}:{1}/MCWS/v1/"
@@ -72,7 +68,7 @@ Module JRMCStatusListener
 
     Function DoGet(path As String) As XPathNavigator
         Dim request As HttpWebRequest = WebRequest.Create(path)
-        SetBasicAuthHeader(request, user, password)
+        SetBasicAuthHeader(request, My.Settings.Username, My.Settings.Password)
         Dim response As HttpWebResponse = request.GetResponse()
         Dim sr As StreamReader = New StreamReader(response.GetResponseStream())
         Dim docNav As XPathDocument = New XPathDocument(sr)
@@ -80,7 +76,7 @@ Module JRMCStatusListener
     End Function
 
     Sub SetBasicAuthHeader(request As WebRequest, userName As String, userPassword As String)
-        Dim authInfo As String = My.Settings.Username + ":" + My.Settings.Password
+        Dim authInfo As String = userName + ":" + userPassword
         authInfo = Convert.ToBase64String(Encoding.Default.GetBytes(authInfo))
         request.Headers.Set("Authorization", "Basic " + authInfo)
     End Sub
