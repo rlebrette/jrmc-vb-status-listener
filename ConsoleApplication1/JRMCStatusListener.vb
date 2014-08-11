@@ -4,8 +4,66 @@ Imports System.Text
 Imports System.IO
 Imports System.Xml
 Imports System.Xml.XPath
+Imports System.CodeDom.Compiler
+
 
 Module JRMCStatusListener
+    Public Class StatusUpdater
+        Implements ScriptingLibrary.IUpdater
+        Public Sub Execute(ByVal Commande As String) Implements ScriptingLibrary.IUpdater.Execute
+
+
+        End Sub
+        Public Sub SendHTTP(ByVal Commande As String) Implements ScriptingLibrary.IUpdater.SendHTTP
+
+
+        End Sub
+        Public Function PlayerStatus() As ScriptingLibrary.PlayerStatus Implements ScriptingLibrary.IUpdater.PlayerStatus
+            Return myPlayerStatus
+        End Function
+    End Class
+
+    Private Property _compiledScript As ScriptingLibrary.IScript
+
+    Function Compile(currentExec As String, scriptPath As String) As ScriptingLibrary.IScript
+        Dim results As CompilerResults
+        Dim reference As String
+
+        'Find reference
+        reference = System.IO.Path.GetDirectoryName(currentExec)
+        If Not reference.EndsWith("\") Then reference &= "\"
+        reference &= "ScriptingLibrary.dll"
+        Dim line As String
+
+        Try
+            Using sr As New StreamReader(scriptPath)
+                line = sr.ReadToEnd()
+            End Using
+        Catch e As Exception
+            Console.WriteLine("The file could not be read:")
+            Console.WriteLine(e.Message)
+            Throw e
+        End Try
+
+        'Compile script
+        results = Scripting.CompileScript(line, reference, Scripting.Languages.VB)
+
+        If results.Errors.Count = 0 Then
+            Compile = DirectCast(Scripting.FindInterface(results.CompiledAssembly, "IScript"), ScriptingLibrary.IScript)
+            Console.WriteLine("Script loaded and compiled: " + scriptPath)
+        Else
+            Dim err As CompilerError
+
+            Console.BackgroundColor = ConsoleColor.DarkRed
+            Console.WriteLine("Script loaded and compiled with ERRORS: " + scriptPath)
+            'Add each error as a listview item with its line number
+            For Each err In results.Errors
+                Console.WriteLine("Line : " + err.Line.ToString() + "=>" + err.ErrorText)
+            Next
+
+        End If
+    End Function
+
     Const sleepTime = 250 ' milliseconds
     '----
     Const baseUrl = "http://{0}:{1}/MCWS/v1/"
@@ -17,23 +75,26 @@ Module JRMCStatusListener
     Const mediaTypeField = "MPL/Item/Field[@Name='Media Type']/text()"
     Const genreField = "MPL/Item/Field[@Name='Genre']/text()"
 
-    Structure PlayerStatus
-        Property fileKey As String
-        Property status As String
-        Property mediaType As String
-        Property genre As String
-        Property volume As String
-    End Structure
-
-    Dim myPlayerStatus As PlayerStatus
-
+    Dim myPlayerStatus As ScriptingLibrary.PlayerStatus
     Dim serverURL As String
 
-    Sub JRMCStatusChanged(status As PlayerStatus)
-        Console.WriteLine(status.fileKey + "|" + status.status + "|" + status.mediaType + "|" + status.genre + "|" + status.volume)
-    End Sub
-
     Sub Main()
+        Dim clArgs() As String = Environment.GetCommandLineArgs()
+        Dim updater As StatusUpdater = New StatusUpdater()
+
+        Console.Title = "JRiver MC Status Notifier"
+        Console.BackgroundColor = ConsoleColor.DarkBlue
+        Console.ForegroundColor = ConsoleColor.White
+        Console.WindowHeight = 15
+        Console.WindowWidth = Console.LargestWindowWidth / 3
+        Console.Clear()
+        Dim script As ScriptingLibrary.IScript = Compile(clArgs(0), clArgs(1))
+        If script Is Nothing Then
+            Console.WriteLine("Paused... <please press enter>")
+            Dim input = Console.ReadLine()
+            Return
+        End If
+
         Dim connected As Boolean = True
         serverURL = String.Format(baseUrl, My.Settings.Host, My.Settings.Port)
 
@@ -66,7 +127,7 @@ Module JRMCStatusListener
                     myPlayerStatus.status = status
                     myPlayerStatus.volume = volume
 
-                    JRMCStatusChanged(myPlayerStatus)
+                    script.Update(updater)
                 End If
                 Thread.Sleep(sleepTime)
             Catch ex As WebException
@@ -84,6 +145,7 @@ Module JRMCStatusListener
         Dim response As HttpWebResponse = request.GetResponse()
         Dim sr As StreamReader = New StreamReader(response.GetResponseStream())
         Dim docNav As XPathDocument = New XPathDocument(sr)
+        response.Close()
         Return docNav.CreateNavigator()
     End Function
 
@@ -99,3 +161,5 @@ Module JRMCStatusListener
         Return result.Current.ToString
     End Function
 End Module
+
+
