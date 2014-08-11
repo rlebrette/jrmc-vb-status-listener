@@ -2,10 +2,11 @@
     Sub Update(ByVal Updater As IUpdater)
 End Interface
 
+
 Public Interface IUpdater
     Function PlayerStatus() As PlayerStatus
     Sub Execute(ByVal Commande As String)
-    Sub SendHTTP(ByVal Commande As String)
+    Sub SendHTTP(ByVal Commande As String, Optional ByVal Args As Dictionary(Of String, String) = Nothing)
 End Interface
 
 Public Structure PlayerStatus

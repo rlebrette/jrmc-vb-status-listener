@@ -83,26 +83,35 @@ Namespace My
         
         <Global.System.Configuration.ApplicationScopedSettingAttribute(), _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(), _
-         Global.System.Configuration.DefaultSettingValueAttribute("C0largol$")> _
+         Global.System.Configuration.DefaultSettingValueAttribute("")> _
         Public ReadOnly Property Password() As String
             Get
                 Return CType(Me("Password"), String)
+            End Get
+        End Property
+
+        <Global.System.Configuration.ApplicationScopedSettingAttribute(), _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(), _
+         Global.System.Configuration.DefaultSettingValueAttribute("monscript.vb")> _
+        Public ReadOnly Property Script() As String
+            Get
+                Return CType(Me("Script"), String)
             End Get
         End Property
     End Class
 End Namespace
 
 Namespace My
-    
-    <Global.Microsoft.VisualBasic.HideModuleNameAttribute(),  _
-     Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
-     Global.System.Runtime.CompilerServices.CompilerGeneratedAttribute()>  _
+
+    <Global.Microsoft.VisualBasic.HideModuleNameAttribute(), _
+     Global.System.Diagnostics.DebuggerNonUserCodeAttribute(), _
+     Global.System.Runtime.CompilerServices.CompilerGeneratedAttribute()> _
     Friend Module MySettingsProperty
-        
-        <Global.System.ComponentModel.Design.HelpKeywordAttribute("My.Settings")>  _
-        Friend ReadOnly Property Settings() As Global.JRMCStatusListner.My.MySettings
+
+        <Global.System.ComponentModel.Design.HelpKeywordAttribute("My.Settings")> _
+        Friend ReadOnly Property Settings() As Global.JRMCStatusListener.My.MySettings
             Get
-                Return Global.JRMCStatusListner.My.MySettings.Default
+                Return Global.JRMCStatusListener.My.MySettings.Default
             End Get
         End Property
     End Module

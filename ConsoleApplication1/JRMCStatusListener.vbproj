@@ -6,9 +6,9 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{1C86BDAF-833C-4F80-A066-02BB65069C67}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <StartupObject>JRMCStatusListner.JRMCStatusListener</StartupObject>
-    <RootNamespace>JRMCStatusListner</RootNamespace>
-    <AssemblyName>JRMCStatusListner</AssemblyName>
+    <StartupObject>JRMCStatusListener.JRMCStatusListener</StartupObject>
+    <RootNamespace>JRMCStatusListener</RootNamespace>
+    <AssemblyName>JRMCStatusListener</AssemblyName>
     <FileAlignment>512</FileAlignment>
     <MyType>Console</MyType>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
@@ -21,7 +21,7 @@
     <DefineDebug>true</DefineDebug>
     <DefineTrace>true</DefineTrace>
     <OutputPath>bin\Debug\</OutputPath>
-    <DocumentationFile>JRMCStatusListner.xml</DocumentationFile>
+    <DocumentationFile>JRMCStatusListener.xml</DocumentationFile>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -31,7 +31,7 @@
     <DefineTrace>true</DefineTrace>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DocumentationFile>JRMCStatusListner.xml</DocumentationFile>
+    <DocumentationFile>JRMCStatusListener.xml</DocumentationFile>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
@@ -53,6 +53,7 @@
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Deployment" />
+    <Reference Include="System.Web" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />

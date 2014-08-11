@@ -8,7 +8,7 @@ Imports System.Runtime.InteropServices
 
 ' Passez en revue les valeurs des attributs de l'assembly
 
-<Assembly: AssemblyTitle("ConsoleApplication1")> 
+<Assembly: AssemblyTitle("JRMCStatusListener")> 
 <Assembly: AssemblyDescription("")> 
 <Assembly: AssemblyCompany("")> 
 <Assembly: AssemblyProduct("ConsoleApplication1")> 

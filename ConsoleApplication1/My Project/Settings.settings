@@ -12,7 +12,10 @@
       <Value Profile="(Default)">rlebrette</Value>
     </Setting>
     <Setting Name="Password" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">C0largol$</Value>
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="Script" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">monscript.vb</Value>
     </Setting>
   </Settings>
 </SettingsFile>

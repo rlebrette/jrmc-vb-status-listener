@@ -8,15 +8,32 @@ Imports System.CodeDom.Compiler
 
 
 Module JRMCStatusListener
+
     Public Class StatusUpdater
         Implements ScriptingLibrary.IUpdater
         Public Sub Execute(ByVal Commande As String) Implements ScriptingLibrary.IUpdater.Execute
 
 
         End Sub
-        Public Sub SendHTTP(ByVal Commande As String) Implements ScriptingLibrary.IUpdater.SendHTTP
+        Public Sub SendHTTP(Commande As String, Optional Args As Dictionary(Of String, String) = Nothing) Implements ScriptingLibrary.IUpdater.SendHTTP
+            Try
+                If Not Args Is Nothing Then
+                    Dim sep As String = ""
+                    Commande &= "?"
+                    For Each arg In Args
+                        Commande &= sep + arg.Key + "=" + System.Web.HttpUtility.UrlEncode(arg.Value)
+                        sep = "&"
+                    Next
+                End If
 
 
+                Dim request As HttpWebRequest = WebRequest.Create(Commande)
+                Dim response As HttpWebResponse = request.GetResponse()
+                response.Close()
+            Catch ex As Exception
+                Console.WriteLine("| " + ex.Message)
+                Console.WriteLine("| " + Commande)
+            End Try
         End Sub
         Public Function PlayerStatus() As ScriptingLibrary.PlayerStatus Implements ScriptingLibrary.IUpdater.PlayerStatus
             Return myPlayerStatus
@@ -31,7 +48,7 @@ Module JRMCStatusListener
 
         'Find reference
         reference = System.IO.Path.GetDirectoryName(currentExec)
-        If Not reference.EndsWith("\") Then reference &= "\"
+        If Not reference = "" And Not reference.EndsWith("\") Then reference &= "\"
         reference &= "ScriptingLibrary.dll"
         Dim line As String
 
@@ -50,7 +67,6 @@ Module JRMCStatusListener
 
         If results.Errors.Count = 0 Then
             Compile = DirectCast(Scripting.FindInterface(results.CompiledAssembly, "IScript"), ScriptingLibrary.IScript)
-            Console.WriteLine("Script loaded and compiled: " + scriptPath)
         Else
             Dim err As CompilerError
 
@@ -78,23 +94,38 @@ Module JRMCStatusListener
     Dim myPlayerStatus As ScriptingLibrary.PlayerStatus
     Dim serverURL As String
 
+    Sub Pause(message As String)
+        Console.WriteLine(message)
+        Console.BackgroundColor = ConsoleColor.DarkRed
+        Console.WriteLine("Paused... <please press a key>")
+        Console.BackgroundColor = ConsoleColor.Black
+        Console.ReadKey()
+    End Sub
     Sub Main()
         Dim clArgs() As String = Environment.GetCommandLineArgs()
         Dim updater As StatusUpdater = New StatusUpdater()
 
         Console.Title = "JRiver MC Status Notifier"
-        Console.BackgroundColor = ConsoleColor.DarkBlue
         Console.ForegroundColor = ConsoleColor.White
         Console.WindowHeight = 15
         Console.WindowWidth = Console.LargestWindowWidth / 3
-        Console.Clear()
-        Dim script As ScriptingLibrary.IScript = Compile(clArgs(0), clArgs(1))
+        Dim scriptFile As String
+        If clArgs.Length <> 2 Then
+            scriptFile = My.Settings.Script
+        Else
+            scriptFile = clArgs(1)
+        End If
+
+        Dim script As ScriptingLibrary.IScript = Compile(clArgs(0), scriptFile)
         If script Is Nothing Then
-            Console.WriteLine("Paused... <please press enter>")
-            Dim input = Console.ReadLine()
+            Pause("The script can't be compiled")
             Return
         End If
 
+        Console.BackgroundColor = ConsoleColor.DarkBlue
+        Console.Clear()
+        Console.WriteLine(Console.Title + " " + My.Application.Info.Version.ToString)
+        Console.WriteLine("Script loaded and compiled: " + scriptFile)
         Dim connected As Boolean = True
         serverURL = String.Format(baseUrl, My.Settings.Host, My.Settings.Port)
 
@@ -108,24 +139,24 @@ Module JRMCStatusListener
                 Dim status As String = GetData(nav, statusItem)
                 Dim volume As String = GetData(nav, volumeItem)
 
-                Dim fileHasChanged As Boolean = myPlayerStatus.fileKey <> fileKey
-                Dim statusHasChanged As Boolean = myPlayerStatus.status <> status Or myPlayerStatus.volume <> volume
+                Dim fileHasChanged As Boolean = myPlayerStatus.FileKey <> fileKey
+                Dim statusHasChanged As Boolean = myPlayerStatus.Status <> status Or myPlayerStatus.Volume <> volume
 
 
                 If fileHasChanged Or statusHasChanged Then
-                    myPlayerStatus.fileKey = fileKey
+                    myPlayerStatus.FileKey = fileKey
                     If fileHasChanged Then
                         If fileKey <> -1 Then
                             nav = DoGet(serverURL + fileInfo + fileKey)
-                            myPlayerStatus.mediaType = GetData(nav, mediaTypeField)
-                            myPlayerStatus.genre = GetData(nav, genreField)
+                            myPlayerStatus.MediaType = GetData(nav, mediaTypeField)
+                            myPlayerStatus.Genre = GetData(nav, genreField)
                         Else
-                            myPlayerStatus.mediaType = "Unknown"
-                            myPlayerStatus.genre = "Unknown"
+                            myPlayerStatus.MediaType = "Unknown"
+                            myPlayerStatus.Genre = "Unknown"
                         End If
                     End If
-                    myPlayerStatus.status = status
-                    myPlayerStatus.volume = volume
+                    myPlayerStatus.Status = status
+                    myPlayerStatus.Volume = volume
 
                     script.Update(updater)
                 End If
