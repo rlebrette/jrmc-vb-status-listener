@@ -6,87 +6,17 @@ Imports System.Xml
 Imports System.Xml.XPath
 Imports System.CodeDom.Compiler
 
-
+' An utility that check JRiver every N milliseconds, and trigs a command each time the player status changes
 Module JRMCStatusListener
 
-    Public Class StatusUpdater
-        Implements ScriptingLibrary.IUpdater
-        Public Sub Execute(ByVal Commande As String) Implements ScriptingLibrary.IUpdater.Execute
-
-
-        End Sub
-        Public Sub SendHTTP(Commande As String, Optional Args As Dictionary(Of String, String) = Nothing) Implements ScriptingLibrary.IUpdater.SendHTTP
-            Try
-                If Not Args Is Nothing Then
-                    Dim sep As String = ""
-                    Commande &= "?"
-                    For Each arg In Args
-                        Commande &= sep + arg.Key + "=" + System.Web.HttpUtility.UrlEncode(arg.Value)
-                        sep = "&"
-                    Next
-                End If
-
-
-                Dim request As HttpWebRequest = WebRequest.Create(Commande)
-                Dim response As HttpWebResponse = request.GetResponse()
-                response.Close()
-            Catch ex As Exception
-                Console.WriteLine("| " + ex.Message)
-                Console.WriteLine("| " + Commande)
-            End Try
-        End Sub
-        Public Function PlayerStatus() As ScriptingLibrary.PlayerStatus Implements ScriptingLibrary.IUpdater.PlayerStatus
-            Return myPlayerStatus
-        End Function
-    End Class
-
-    Private Property _compiledScript As ScriptingLibrary.IScript
-
-    Function Compile(currentExec As String, scriptPath As String) As ScriptingLibrary.IScript
-        Dim results As CompilerResults
-        Dim reference As String
-
-        'Find reference
-        reference = System.IO.Path.GetDirectoryName(currentExec)
-        If Not reference = "" And Not reference.EndsWith("\") Then reference &= "\"
-        reference &= "ScriptingLibrary.dll"
-        Dim line As String
-
-        Try
-            Using sr As New StreamReader(scriptPath)
-                line = sr.ReadToEnd()
-            End Using
-        Catch e As Exception
-            Console.WriteLine("The file could not be read:")
-            Console.WriteLine(e.Message)
-            Throw e
-        End Try
-
-        'Compile script
-        results = Scripting.CompileScript(line, reference, Scripting.Languages.VB)
-
-        If results.Errors.Count = 0 Then
-            Compile = DirectCast(Scripting.FindInterface(results.CompiledAssembly, "IScript"), ScriptingLibrary.IScript)
-        Else
-            Dim err As CompilerError
-
-            Console.BackgroundColor = ConsoleColor.DarkRed
-            Console.WriteLine("Script loaded and compiled with ERRORS: " + scriptPath)
-            'Add each error as a listview item with its line number
-            For Each err In results.Errors
-                Console.WriteLine("Line : " + err.Line.ToString() + "=>" + err.ErrorText)
-            Next
-
-        End If
-    End Function
-
     Const sleepTime = 250 ' milliseconds
-    '----
+
+
     Const baseUrl = "http://{0}:{1}/MCWS/v1/"
     Const playInfo = "Playback/Info?Zone=-1"
     Const fileInfo = "File/GetInfo?File="
     Const fileKeyItem = "Response/Item[@Name='FileKey']/text()"
-    Const statusItem = "Response/Item[@Name='Status']/text()"
+    Const statusItem = "Response/Item[@Name='State']/text()"
     Const volumeItem = "Response/Item[@Name='VolumeDisplay']/text()"
     Const mediaTypeField = "MPL/Item/Field[@Name='Media Type']/text()"
     Const genreField = "MPL/Item/Field[@Name='Genre']/text()"
@@ -94,13 +24,6 @@ Module JRMCStatusListener
     Dim myPlayerStatus As ScriptingLibrary.PlayerStatus
     Dim serverURL As String
 
-    Sub Pause(message As String)
-        Console.WriteLine(message)
-        Console.BackgroundColor = ConsoleColor.DarkRed
-        Console.WriteLine("Paused... <please press a key>")
-        Console.BackgroundColor = ConsoleColor.Black
-        Console.ReadKey()
-    End Sub
     Sub Main()
         Dim clArgs() As String = Environment.GetCommandLineArgs()
         Dim updater As StatusUpdater = New StatusUpdater()
@@ -170,8 +93,19 @@ Module JRMCStatusListener
         Loop
     End Sub
 
+    ' Pause and wait a keypress
+    Sub Pause(message As String)
+        Console.WriteLine(message)
+        Console.BackgroundColor = ConsoleColor.DarkRed
+        Console.WriteLine("Paused... <please press a key>")
+        Console.BackgroundColor = ConsoleColor.Black
+        Console.ReadKey()
+    End Sub
+
+    ' Do a HTTP Get with BasicAuth, retrieve the document as an XPath queryable document
     Function DoGet(path As String) As XPathNavigator
         Dim request As HttpWebRequest = WebRequest.Create(path)
+        request.Timeout = 3000
         SetBasicAuthHeader(request, My.Settings.Username, My.Settings.Password)
         Dim response As HttpWebResponse = request.GetResponse()
         Dim sr As StreamReader = New StreamReader(response.GetResponseStream())
@@ -180,17 +114,89 @@ Module JRMCStatusListener
         Return docNav.CreateNavigator()
     End Function
 
+    ' Add BasicAuth information to the WebRequest
     Sub SetBasicAuthHeader(request As WebRequest, userName As String, userPassword As String)
         Dim authInfo As String = userName + ":" + userPassword
         authInfo = Convert.ToBase64String(Encoding.Default.GetBytes(authInfo))
         request.Headers.Set("Authorization", "Basic " + authInfo)
     End Sub
 
+    ' Retrieve Data from the XML document using the provide XPath
     Function GetData(nav As XPathNavigator, path As String) As String
         Dim result As XPathNodeIterator = nav.Evaluate(path)
         result.MoveNext()
         Return result.Current.ToString
     End Function
+
+    ' The implementation of the Updater that will be provided to the script.
+    Public Class StatusUpdater
+        Implements ScriptingLibrary.IUpdater
+        Public Sub Execute(ByVal Commande As String) Implements ScriptingLibrary.IUpdater.Execute
+        End Sub
+        Public Sub SendHTTP(Commande As String, Optional Args As Dictionary(Of String, String) = Nothing) Implements ScriptingLibrary.IUpdater.SendHTTP
+            Try
+                If Not Args Is Nothing Then
+                    Dim sep As String = ""
+                    Commande &= "?"
+                    For Each arg In Args
+                        Commande &= sep + arg.Key + "=" + System.Web.HttpUtility.UrlEncode(arg.Value)
+                        sep = "&"
+                    Next
+                End If
+
+
+                Dim request As HttpWebRequest = WebRequest.Create(Commande)
+                Dim response As HttpWebResponse = request.GetResponse()
+                response.Close()
+            Catch ex As Exception
+                Console.WriteLine("| " + ex.Message)
+                Console.WriteLine("| " + Commande)
+            End Try
+        End Sub
+        Public Function PlayerStatus() As ScriptingLibrary.PlayerStatus Implements ScriptingLibrary.IUpdater.PlayerStatus
+            Return myPlayerStatus
+        End Function
+    End Class
+
+    ' Read and compile the external script.
+    Function Compile(currentExec As String, scriptPath As String) As ScriptingLibrary.IScript
+        Dim results As CompilerResults
+        Dim reference As String
+
+        'Find reference
+        reference = System.IO.Path.GetDirectoryName(currentExec)
+        If Not reference = "" And Not reference.EndsWith("\") Then reference &= "\"
+        reference &= "ScriptingLibrary.dll"
+        Dim line As String
+
+        Try
+            Using sr As New StreamReader(scriptPath)
+                line = sr.ReadToEnd()
+            End Using
+        Catch e As Exception
+            Console.WriteLine("The file could not be read:")
+            Console.WriteLine(e.Message)
+            Throw e
+        End Try
+
+        'Compile script
+        results = Scripting.CompileScript(line, reference, Scripting.Languages.VB)
+
+        If results.Errors.Count = 0 Then
+            Compile = DirectCast(Scripting.FindInterface(results.CompiledAssembly, "IScript"), ScriptingLibrary.IScript)
+        Else
+            Dim err As CompilerError
+
+            Console.BackgroundColor = ConsoleColor.DarkRed
+            Console.WriteLine("Script loaded and compiled with ERRORS: " + scriptPath)
+            'Add each error as a listview item with its line number
+            For Each err In results.Errors
+                Console.WriteLine("Line : " + err.Line.ToString() + "=>" + err.ErrorText)
+            Next
+            Compile = Nothing
+        End If
+    End Function
+
 End Module
 
 
